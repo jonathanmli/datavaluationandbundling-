@@ -32,3 +32,6 @@ class sampler:
         X = self.sample_X(self, n)
         Y = self.sample_Y(X)
         return np.concatenate((X, Y), axis=1)
+
+    def classify(self, Y):
+        return Y > 0.5
