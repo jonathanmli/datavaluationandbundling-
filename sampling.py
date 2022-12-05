@@ -21,7 +21,7 @@ class sampler:
     # samples predictions Y from predictors X with noise
     def sample_Y(self, X):
         eps = np.random.normal(0, self.eps_sd,len(X))
-        return self._logistics_f(np.matmul(X, self.betas) + eps)
+        return np.expand_dims(self._logistics_f(np.matmul(X, self.betas) + eps), axis=1)
 
     # returns the true Y values given X
     def compute_Y(self, X):
@@ -29,8 +29,10 @@ class sampler:
     
     # samples from joint X, Y distribution
     def sample_XY(self, n):
-        X = self.sample_X(self, n)
+        X = self.sample_X(n)
         Y = self.sample_Y(X)
+        print(X.shape)
+        print(Y.shape)
         return np.concatenate((X, Y), axis=1)
 
     def classify(self, Y):
