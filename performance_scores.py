@@ -7,6 +7,7 @@ def logistics_reg(X, y, Xtest):
     # print(clf.score(Xtest, Ytest))
     return clf.predict_proba(Xtest)[:,1]
 
+# input X, Y the training set (ie. subset you want to evaluate), and Xtest, Ytest the test set 
 def logistics_MAE_score(X, Y, Xtest, Ytest):
     Ytrain = Y > 0.5
     Ypred = logistics_reg(X, Ytrain, Xtest)
@@ -14,6 +15,7 @@ def logistics_MAE_score(X, Y, Xtest, Ytest):
     # print(Ytest)
     return mean_absolute_error(Ytest, Ypred)
 
+# input X, Y the training set (ie. subset you want to evaluate), and Xtest, Ytest the test set 
 def logistics_accuracy_score(X, Y, Xtest, Ytest):
     Ytrain = Y > 0.5
     Ytrue = Ytest > 0.5
