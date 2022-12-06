@@ -4,6 +4,7 @@ class sampler:
 
     # note that first beta is intercept
     def __init__(self, eps_sd = 0.1, betas = np.array([0,1,-1]), Xmean = np.array([0,0]), Xcov = None) -> None:
+        np.random.seed(0)
         self.Xcov = Xcov
         self.Xmean = Xmean 
         self.betas = betas
