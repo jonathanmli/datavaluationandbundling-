@@ -17,6 +17,9 @@ distance: function for distance metric
 note that partition and measure should have same dim n, bundled_measure should have dim k
 '''
 def bundle_difference(partition, bundled_measure, measure, distance):
+    measure = measure/np.sum(measure)
+    bundled_measure = bundled_measure/np.sum(bundled_measure)
+
     k = len(bundled_measure)
     n = len(partition)
     if n != len(measure):
@@ -39,6 +42,9 @@ distance: function for distance metric
 note that partition and measure should have same dim n, bundled_measure should have dim k
 '''
 def individual_difference(partition, bundled_measure, measure, distance):
+    measure = measure/np.sum(measure)
+    bundled_measure = bundled_measure/np.sum(bundled_measure)
+
     k = len(bundled_measure)
     n = len(partition)
     if n != len(measure):
