@@ -1,6 +1,7 @@
 import asyncio
 from itertools import chain, combinations
 from sampling import sampler 
+from joblib import Parallel, delayed
 import performance_scores
 import numpy as np
 import sys
@@ -19,7 +20,6 @@ this can be some idea of accuracy of the model.
 
 input is some subset of the data
 '''
-@background
 def utility_function(data_subset, X, Y, x_test, y_test):
     xcut = X[data_subset, :]
     ycut = Y[data_subset,:]
@@ -50,16 +50,13 @@ def banzhaf_bundled_remove_all(subset, utility, N, X, Y, x_test, y_test):
         withouts.append(without_i)
         withs.append(with_i)
 
-    loop = asyncio.get_event_loop() 
-    utility_without = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withouts])
-    utility_with = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withs])
-    all_groups = asyncio.gather(utility_without, utility_with)
-    results = loop.run_until_complete(all_groups)
+    utility_without = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
+    utility_with = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
    # utility_without = utility_function(without_i, X, Y, x_test, y_test)
    # utility_with = utility_function(with_i, X, Y, x_test, y_test)
    # total_val_with += utility_with 
    # total_val_without +=  utility_without
-    total_val = sum(results[1]) - sum(results[0])
+    total_val = sum(utility_with) - sum(utility_without)
     return total_val
 
 '''
@@ -80,15 +77,12 @@ def banzhaf(i, utility, N, X, Y, x_test, y_test):
         withouts.append(without_i)
         withs.append(with_i)
 
-    loop = asyncio.get_event_loop() 
-    utility_without = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withouts])
-    utility_with = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withs])
-    all_groups = asyncio.gather(utility_without, utility_with)
-    results = loop.run_until_complete(all_groups)
+    utility_without = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
+    utility_with = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
     #utility_without = utility_function(without_i, X, Y, x_test, y_test)
     #utility_with = utility_function(with_i, X, Y, x_test, y_test)
     #total_val += (utility_with - utility_without)
-    total_val = sum(results[1]) - sum(results[0])
+    total_val = sum(utility_with) - sum(utility_without)
     return total_val
 
 def driver(number_samples, num_clusters):
