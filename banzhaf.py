@@ -7,6 +7,9 @@ import numpy as np
 import sys
 from bundling import kmeans_cluster
 import error_measures
+import timeit
+
+NUM_PROC = 1
 
 def background(f):
     def wrapped(*args, **kwargs):
@@ -50,8 +53,8 @@ def banzhaf_bundled_remove_all(subset, utility, N, X, Y, x_test, y_test):
         withouts.append(without_i)
         withs.append(with_i)
 
-    utility_without = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
-    utility_with = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
+    utility_without = Parallel(n_jobs=NUM_PROC)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
+    utility_with = Parallel(n_jobs=NUM_PROC)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
    # utility_without = utility_function(without_i, X, Y, x_test, y_test)
    # utility_with = utility_function(with_i, X, Y, x_test, y_test)
    # total_val_with += utility_with 
@@ -77,8 +80,8 @@ def banzhaf(i, utility, N, X, Y, x_test, y_test):
         withouts.append(without_i)
         withs.append(with_i)
 
-    utility_without = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
-    utility_with = Parallel(n_jobs=20)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
+    utility_without = Parallel(n_jobs=NUM_PROC)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withouts)
+    utility_with = Parallel(n_jobs=NUM_PROC)(delayed(utility_function)(i, X, Y, x_test, y_test) for i in withs)
     #utility_without = utility_function(without_i, X, Y, x_test, y_test)
     #utility_with = utility_function(with_i, X, Y, x_test, y_test)
     #total_val += (utility_with - utility_without)
@@ -102,20 +105,30 @@ def driver(number_samples, num_clusters):
     #banzhaf(int(args[1]), utility_function, N, xs, ys)
 
     bundled_measure =[] 
+    start = timeit.default_timer()
     for i in range(num_clusters):
+
         bundled_measure.append(banzhaf_bundled_remove_all(cluster_map[i], 
                                      utility_function, N, x_train, 
                                      y_train, x_test, y_test))
-    
+    stop = timeit.default_timer()
     print("======")
+    print("Time for num clusters:" , num_clusters, stop-start)
+    
     measure = []
+
+    start = timeit.default_timer()
     for i in range(N):
         measure.append(banzhaf(i, utility_function, N, x_train, y_train, x_test, y_test))
+    stop = timeit.default_timer()
+    print("Time for full banzhaf:" ,  stop-start)
+    print("======")
 
     
     bd_e = error_measures.bundle_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance)
 
     id_e = error_measures.individual_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance)
+    print("Bundled Difference: ", bd_e, "Individual DIfference", id_e)
     return (bd_e, id_e)
 
 if __name__ == "__main__":
@@ -125,7 +138,7 @@ if __name__ == "__main__":
         sys.exit(0)
     N = int(args[0])
     num_clusters = int(args[1])
-    for i in range(2,N):
-        driver(N, num_clusters)
-
-
+    for i in range(2,N+1):
+        start = timeit.default_timer()
+        driver(N, i)
+        stop = timeit.default_timer()
