@@ -1,3 +1,4 @@
+import asyncio
 from itertools import chain, combinations
 from sampling import sampler 
 import performance_scores
@@ -6,12 +7,19 @@ import sys
 from bundling import kmeans_cluster
 import error_measures
 
+def background(f):
+    def wrapped(*args, **kwargs):
+        return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
+
+    return wrapped
+
+
 ''' 
 this can be some idea of accuracy of the model. 
 
 input is some subset of the data
 '''
-
+@background
 def utility_function(data_subset, X, Y, x_test, y_test):
     xcut = X[data_subset, :]
     ycut = Y[data_subset,:]
@@ -30,14 +38,28 @@ def banzhaf_bundled_remove_all(subset, utility, N, X, Y, x_test, y_test):
     out_of_bundle = [i for i in r if i not in subset]
     ps = powerset(out_of_bundle)
     total_val = 0.0
+    total_val_with = 0.0
+    total_val_without = 0.0
+    withouts = []
+    withs = []
     for j in ps:
         if len(j) < 4:
             continue
         without_i = list(j)
         with_i = without_i + subset
-        utility_without = utility_function(without_i, X, Y, x_test, y_test)
-        utility_with = utility_function(with_i, X, Y, x_test, y_test)
-        total_val += (utility_with - utility_without)
+        withouts.append(without_i)
+        withs.append(with_i)
+
+    loop = asyncio.get_event_loop() 
+    utility_without = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withouts])
+    utility_with = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withs])
+    all_groups = asyncio.gather(utility_without, utility_with)
+    results = loop.run_until_complete(all_groups)
+   # utility_without = utility_function(without_i, X, Y, x_test, y_test)
+   # utility_with = utility_function(with_i, X, Y, x_test, y_test)
+   # total_val_with += utility_with 
+   # total_val_without +=  utility_without
+    total_val = sum(results[1]) - sum(results[0])
     return total_val
 
 '''
@@ -48,17 +70,26 @@ def banzhaf(i, utility, N, X, Y, x_test, y_test):
     r = chain(range(0,i) , range(i+1, N))
     ps = powerset(r)
     total_val = 0.0
+    withouts = []
+    withs = []
     for j in ps:
         if len(j) < 4:
             continue
         without_i = list(j)
         with_i = without_i + [i,]
-        utility_without = utility_function(without_i, X, Y, x_test, y_test)
-        utility_with = utility_function(with_i, X, Y, x_test, y_test)
-        total_val += (utility_with - utility_without)
+        withouts.append(without_i)
+        withs.append(with_i)
+
+    loop = asyncio.get_event_loop() 
+    utility_without = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withouts])
+    utility_with = asyncio.gather(*[utility_function(i, X, Y, x_test, y_test) for i in withs])
+    all_groups = asyncio.gather(utility_without, utility_with)
+    results = loop.run_until_complete(all_groups)
+    #utility_without = utility_function(without_i, X, Y, x_test, y_test)
+    #utility_with = utility_function(with_i, X, Y, x_test, y_test)
+    #total_val += (utility_with - utility_without)
+    total_val = sum(results[1]) - sum(results[0])
     return total_val
-
-
 
 def driver(number_samples, num_clusters):
     N = number_samples
@@ -87,9 +118,11 @@ def driver(number_samples, num_clusters):
     for i in range(N):
         measure.append(banzhaf(i, utility_function, N, x_train, y_train, x_test, y_test))
 
-    print(error_measures.bundle_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance))
+    
+    bd_e = error_measures.bundle_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance)
 
-    print(error_measures.individual_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance))
+    id_e = error_measures.individual_difference(clusters, np.array(bundled_measure), np.array(measure), error_measures.abs_distance)
+    return (bd_e, id_e)
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -98,6 +131,7 @@ if __name__ == "__main__":
         sys.exit(0)
     N = int(args[0])
     num_clusters = int(args[1])
-    driver(N, num_clusters)
+    for i in range(2,N):
+        driver(N, num_clusters)
 
 
